@@ -6,7 +6,12 @@ from os import environ
 import ast
 from multiprocessing import cpu_count
 from re import sub
-from typing import Any, Callable, Mapping, Sequence, Type, Union, Literal
+from typing import Any, Callable, Mapping, Sequence, Type, Union
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 from collections import defaultdict
 from enum import Enum, unique, auto
 from ffcv.fields.base import Field
