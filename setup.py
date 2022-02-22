@@ -21,7 +21,7 @@ def pkgconfig(package, kw):
     return kw
 
 
-sources = ['./libffcv/libffcv.cpp']
+sources = ['./libffcv/PillowResize.cc', './libffcv/libffcv.cpp']
 
 extension_kwargs = {
     'sources': sources,
@@ -31,6 +31,7 @@ extension_kwargs = pkgconfig('opencv4', extension_kwargs)
 extension_kwargs = pkgconfig('libturbojpeg', extension_kwargs)
 
 extension_kwargs['libraries'].append('pthread')
+extension_kwargs['extra_compile_args'] = ['-std=c++17']
 
 
 libffcv = Extension('ffcv._libffcv',

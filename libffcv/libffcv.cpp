@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <turbojpeg.h>
 #include <pthread.h>
+#include "PillowResize.hpp"
 
 extern "C" {
     // a key use to point to the tjtransform instance
@@ -30,8 +31,14 @@ extern "C" {
 
         cv::Mat source_matrix(sx, sy, CV_8UC3, (uint8_t*) source_p);
         cv::Mat dest_matrix(tx, ty, CV_8UC3, (uint8_t*) dest_p);
-        cv::resize(source_matrix.colRange(start_col, end_col).rowRange(start_row, end_row),
-                   dest_matrix, dest_matrix.size(), 0, 0, cv::INTER_AREA);
+        //cv::resize(source_matrix.colRange(start_col, end_col).rowRange(start_row, end_row),
+        //           dest_matrix, dest_matrix.size(), 0, 0, cv::INTER_AREA);
+        PillowResize::InterpolationMethods interpolation =
+            PillowResize::InterpolationMethods::INTERPOLATION_BILINEAR;
+        cv::Size out_size = cv::Size(tx, ty);
+        cv::Mat out = PillowResize::resize(source_matrix.colRange(start_col, end_col).rowRange(start_row, end_row), 
+                                           out_size, interpolation);
+        out.copyTo(dest_matrix);
     }
 
     void my_memcpy(void *source, void* dst, uint64_t size) {
