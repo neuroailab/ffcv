@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from numba.typed import Dict
 from PIL.Image import Image
+import PIL
 
 from .base import Field, ARG_TYPE
 from ..pipeline.operation import Operation
@@ -43,6 +44,19 @@ def resizer(image, target_resolution):
         new_size = (ratio * original_size).astype(int)
         image = cv2.resize(image, tuple(new_size), interpolation=cv2.INTER_AREA)
     return image
+
+
+def pil_resizer(image, target_resolution):
+    if target_resolution is None:
+        return image
+    original_size = np.array([image.size[0], image.size[1]])
+    ratio = target_resolution / original_size.max()
+    if ratio < 1:
+        new_size = (ratio * original_size).astype(int)
+        image = image.resize(tuple(new_size), resample=PIL.Image.BILINEAR)
+    return image
+
+
 
 
 def get_random_crop(height, width, scale, ratio):
@@ -291,12 +305,14 @@ class RGBImageField(Field):
     """
     def __init__(self, write_mode='raw', max_resolution: int = None,
                  smart_threshold: int = None, jpeg_quality: int = 90,
-                 compress_probability: float = 0.5) -> None:
+                 compress_probability: float = 0.5,
+                 cv2_resize: bool = True) -> None:
         self.write_mode = write_mode
         self.smart_threshold = smart_threshold
         self.max_resolution = max_resolution
         self.jpeg_quality = int(jpeg_quality)
         self.proportion = compress_probability
+        self.cv2_resize = cv2_resize
 
     @property
     def metadata_type(self) -> np.dtype:
@@ -317,10 +333,7 @@ class RGBImageField(Field):
     def to_binary(self) -> ARG_TYPE:
         return np.zeros(1, dtype=ARG_TYPE)[0]
 
-    def encode(self, destination, image, malloc):
-        if isinstance(image, Image):
-            image = np.array(image)
-
+    def check_shape_dtype(self, image):
         if not isinstance(image, np.ndarray):
             raise TypeError(f"Unsupported image type {type(image)}")
 
@@ -332,7 +345,17 @@ class RGBImageField(Field):
 
         assert image.dtype == np.uint8
 
-        image = resizer(image, self.max_resolution)
+    def encode(self, destination, image, malloc):
+        if self.cv2_resize:
+            if isinstance(image, Image):
+                image = np.array(image)
+            self.check_shape_dtype(image)
+            image = resizer(image, self.max_resolution)
+        else:
+            assert isinstance(image, Image)
+            image = pil_resizer(image, self.max_resolution)
+            image = np.array(image)
+            self.check_shape_dtype(image)
 
         write_mode = self.write_mode
         as_jpg = None
